@@ -18,4 +18,17 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-ui": ["framer-motion", "@radix-ui/react-dialog", "@radix-ui/react-tabs", "@radix-ui/react-select", "@radix-ui/react-dropdown-menu"],
+          "vendor-charts": ["recharts"],
+          "vendor-map": ["leaflet", "react-leaflet"],
+          "vendor-misc": ["zustand", "zod", "date-fns", "lucide-react"],
+        },
+      },
+    },
+  },
 }));

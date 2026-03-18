@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
 import { intelligenceProfiles } from "@/data/mockData";
-import { Brain, ChevronRight, User, Clock, AlertTriangle, Check, Plus, MapPin, Network, FileText } from "lucide-react";
+import { Brain, ChevronRight, User, Clock, AlertTriangle, Check, Plus, MapPin, Network, FileText, ListFilter, PlusCircle, Calendar, Building2, Users } from "lucide-react";
 import { useState } from "react";
 import { SourceReportEntryForm } from "./SourceReportEntryForm";
 import { AccusedProfileEntryForm } from "./AccusedProfileEntryForm";
 import { CIUInitiatedReportForm } from "./CIUInitiatedReportForm";
 import { ApprovalDashboard } from "./ApprovalDashboard";
+import { useAppStore, ReportStatus } from "../../store/appStore";
 
 const topTabs = ["Source Reports", "Accused Profiles", "CIU Initiated", "Approval Workflow"];
 
@@ -71,6 +72,302 @@ const caseHistory: Record<string, { id: string; date: string; type: string; outc
   "ACC-005": [{ id: "CS-2024-1826", date: "2024-11-30", type: "PEW", outcome: "Released on Bail" }],
 };
 
+// ─── Status helpers ────────────────────────────────────────────────────────
+const STATUS_LABELS: Record<ReportStatus, string> = {
+  pending_dsp: "Pending DSP",
+  pending_spciu: "Pending SPCIU",
+  pending_dig: "Pending DIG",
+  pending_adgp: "Pending ADGP",
+  approved_adgp: "Approved by ADGP",
+  delegated: "Delegated",
+  field_report_received: "Field Report Received",
+  rejected: "Rejected",
+};
+
+const STATUS_COLORS: Record<ReportStatus, { bg: string; text: string }> = {
+  pending_dsp: { bg: "hsl(var(--risk-medium) / 0.12)", text: "hsl(var(--risk-medium))" },
+  pending_spciu: { bg: "hsl(var(--risk-medium) / 0.12)", text: "hsl(var(--risk-medium))" },
+  pending_dig: { bg: "hsl(var(--risk-medium) / 0.12)", text: "hsl(var(--risk-medium))" },
+  pending_adgp: { bg: "hsl(var(--risk-medium) / 0.12)", text: "hsl(var(--risk-medium))" },
+  approved_adgp: { bg: "hsl(var(--risk-low) / 0.12)", text: "hsl(var(--risk-low))" },
+  delegated: { bg: "hsl(var(--primary) / 0.12)", text: "hsl(var(--primary))" },
+  field_report_received: { bg: "hsl(220 80% 55% / 0.12)", text: "hsl(220 80% 45%)" },
+  rejected: { bg: "hsl(var(--risk-high) / 0.12)", text: "hsl(var(--risk-high))" },
+};
+
+// Seed mock reports so list is never empty in demo
+const mockSeedReports = [
+  {
+    id: "INT-2025-3821",
+    source: "CIU" as const,
+    date: "2025-03-10",
+    time: "09:30",
+    location: "Anna Nagar",
+    district: "Chennai",
+    offenders: [{ type: "known" as const, firstName: "Murugan", lastName: "Selvam", risk: "High" }],
+    status: "approved_adgp" as ReportStatus,
+    history: [
+      { role: "CIU" as const, action: "submitted" as const, date: "2025-03-10T09:30:00Z" },
+      { role: "DSP" as const, action: "approved" as const, date: "2025-03-10T11:15:00Z" },
+      { role: "SPCIU" as const, action: "approved" as const, date: "2025-03-10T14:20:00Z" },
+      { role: "DIG" as const, action: "approved" as const, date: "2025-03-11T08:45:00Z" },
+      { role: "ADGP" as const, action: "approved" as const, date: "2025-03-11T10:30:00Z" },
+    ],
+  },
+  {
+    id: "INT-2025-4102",
+    source: "CIU" as const,
+    date: "2025-03-14",
+    time: "14:00",
+    location: "Mattuthavani Terminal",
+    district: "Madurai",
+    offenders: [
+      { type: "known" as const, firstName: "Kavitha", lastName: "Rajan", risk: "Medium" },
+      { type: "unknown" as const, description: "Tall male, ~40 yrs", risk: "Medium" },
+    ],
+    status: "pending_dig" as ReportStatus,
+    history: [
+      { role: "CIU" as const, action: "submitted" as const, date: "2025-03-14T14:00:00Z" },
+      { role: "DSP" as const, action: "approved" as const, date: "2025-03-14T16:10:00Z" },
+      { role: "SPCIU" as const, action: "approved" as const, date: "2025-03-15T09:05:00Z" },
+    ],
+  },
+  {
+    id: "INT-2025-4567",
+    source: "CIU" as const,
+    date: "2025-03-16",
+    time: "11:15",
+    location: "Gandhipuram",
+    district: "Coimbatore",
+    offenders: [{ type: "unknown" as const, description: "Young male on motorcycle", risk: "Low" }],
+    status: "pending_dsp" as ReportStatus,
+    history: [
+      { role: "CIU" as const, action: "submitted" as const, date: "2025-03-16T11:15:00Z" },
+    ],
+  },
+  {
+    id: "INT-2025-4890",
+    source: "CIU" as const,
+    date: "2025-03-17",
+    time: "08:45",
+    location: "RS Puram Junction",
+    district: "Coimbatore",
+    offenders: [{ type: "known" as const, firstName: "Senthil", lastName: "Kumar", risk: "High" }],
+    status: "rejected" as ReportStatus,
+    history: [
+      { role: "CIU" as const, action: "submitted" as const, date: "2025-03-17T08:45:00Z" },
+      { role: "DSP" as const, action: "rejected" as const, date: "2025-03-17T10:30:00Z", comment: "Insufficient evidence provided" },
+    ],
+  },
+];
+
+function CIUInitiatedSection() {
+  const [ciuView, setCiuView] = useState<"list" | "new">("list");
+  const intelligenceReports = useAppStore(s => s.intelligenceReports);
+
+  // Merge seeded mock data with any newly submitted reports from the store
+  const allReports = [
+    ...mockSeedReports,
+    ...intelligenceReports.filter(r => !mockSeedReports.find(m => m.id === r.id)),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Sub-tab bar + action button */}
+      <div className="flex items-center justify-between px-6 py-3 border-b" style={{ borderColor: "hsl(var(--border))" }}>
+        <div className="flex items-center gap-1 rounded-lg border overflow-hidden" style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--muted)/0.3)" }}>
+          <button
+            onClick={() => setCiuView("list")}
+            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-all ${ciuView === "list" ? "bg-primary text-white shadow" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <ListFilter className="h-3.5 w-3.5" /> My Reports
+          </button>
+          <button
+            onClick={() => setCiuView("new")}
+            className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-all ${ciuView === "new" ? "bg-primary text-white shadow" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <PlusCircle className="h-3.5 w-3.5" /> New Report
+          </button>
+        </div>
+
+        {ciuView === "list" && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{allReports.length} report{allReports.length !== 1 ? "s" : ""} submitted</span>
+            <button
+              onClick={() => setCiuView("new")}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-all"
+              style={{ background: "hsl(var(--primary))" }}
+            >
+              <PlusCircle className="h-3.5 w-3.5" /> New Report
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── LIST VIEW ── */}
+      {ciuView === "list" && (
+        <div className="flex-1 overflow-y-auto p-6">
+          {allReports.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+              <FileText className="h-12 w-12 text-muted-foreground/30" />
+              <div>
+                <p className="font-semibold text-foreground">No reports yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Submit your first CIU intelligence report to get started.</p>
+              </div>
+              <button
+                onClick={() => setCiuView("new")}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white"
+                style={{ background: "hsl(var(--primary))" }}
+              >
+                <PlusCircle className="h-4 w-4" /> Create Report
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-xl border overflow-hidden shadow-sm" style={{ borderColor: "hsl(var(--border))" }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b" style={{ background: "hsl(var(--muted)/0.4)", borderColor: "hsl(var(--border))" }}>
+                    {["Report ID", "Date", "Location", "District", "Offenders", "Current Status", "Approval Progress"].map(h => (
+                      <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {allReports.map((r, i) => {
+                    const color = STATUS_COLORS[r.status];
+                    const label = STATUS_LABELS[r.status];
+                    const approvalSteps = ["CIU", "DSP", "SPCIU", "DIG", "ADGP"];
+                    // History actions map to steps
+                    const approvedRoles = r.history
+                      .filter(h => h.action === "approved" || h.action === "submitted")
+                      .map(h => h.role);
+                    const isRejected = r.status === "rejected";
+
+                    return (
+                      <motion.tr
+                        key={r.id}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.04 }}
+                        className={`border-b last:border-0 transition-colors hover:bg-muted/20 ${i % 2 !== 0 ? "bg-muted/10" : ""}`}
+                        style={{ borderColor: "hsl(var(--border))" }}
+                      >
+                        {/* Report ID */}
+                        <td className="py-3 px-4">
+                          <span className="font-mono text-xs font-semibold" style={{ color: "hsl(var(--accent))" }}>{r.id}</span>
+                        </td>
+
+                        {/* Date */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Calendar className="h-3 w-3 shrink-0" />
+                            {r.date}
+                          </div>
+                        </td>
+
+                        {/* Location */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5 text-sm text-foreground font-medium">
+                            <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            {r.location || "—"}
+                          </div>
+                        </td>
+
+                        {/* District */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Building2 className="h-3 w-3 shrink-0" />
+                            {r.district || "—"}
+                          </div>
+                        </td>
+
+                        {/* Offenders */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5">
+                            <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-sm font-semibold text-foreground">{r.offenders.length}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({r.offenders.filter(o => o.type === "known").length} known)
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Status badge */}
+                        <td className="py-3 px-4">
+                          <span
+                            className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap"
+                            style={{ background: color.bg, color: color.text }}
+                          >
+                            {label}
+                          </span>
+                        </td>
+
+                        {/* Approval progress dots */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1">
+                            {approvalSteps.map((step, si) => {
+                              const isDone = approvedRoles.includes(step as any);
+                              const isRejectedStep = isRejected && !isDone && r.history.some(h => h.role === step && h.action === "rejected");
+                              return (
+                                <div key={step} className="flex items-center gap-1">
+                                  <div
+                                    title={step}
+                                    className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold border transition-all"
+                                    style={{
+                                      background: isRejectedStep
+                                        ? "hsl(var(--risk-high) / 0.15)"
+                                        : isDone
+                                          ? "hsl(var(--primary))"
+                                          : "hsl(var(--muted))",
+                                      color: isDone ? "#fff" : isRejectedStep ? "hsl(var(--risk-high))" : "hsl(var(--muted-foreground))",
+                                      borderColor: isDone
+                                        ? "hsl(var(--primary))"
+                                        : isRejectedStep
+                                          ? "hsl(var(--risk-high))"
+                                          : "hsl(var(--border))",
+                                    }}
+                                  >
+                                    {isDone ? "✓" : step.charAt(0)}
+                                  </div>
+                                  {si < approvalSteps.length - 1 && (
+                                    <div
+                                      className="h-px w-3"
+                                      style={{ background: isDone && approvedRoles.includes(approvalSteps[si + 1] as any) ? "hsl(var(--primary))" : "hsl(var(--border))" }}
+                                    />
+                                  )}
+                                </div>
+                              );
+                            })}
+                            {r.status === "delegated" && (
+                              <>
+                                <div className="h-px w-3" style={{ background: "hsl(var(--primary))" }} />
+                                <div
+                                  title="PEW DSP"
+                                  className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold border"
+                                  style={{ background: "hsl(var(--primary))", color: "#fff", borderColor: "hsl(var(--primary))" }}
+                                >✓</div>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── NEW REPORT FORM ── */}
+      {ciuView === "new" && (
+        <CIUInitiatedReportForm onAfterSubmit={() => setCiuView("list")} />
+      )}
+    </div>
+  );
+}
+
 export function IntelligencePage() {
   const [topTab, setTopTab] = useState("Accused Profiles");
   const [selected, setSelected] = useState(intelligenceProfiles[0]);
@@ -93,9 +390,11 @@ export function IntelligencePage() {
             if (topTab === "Source Reports") setShowSourceReportForm(true);
             else if (topTab === "Accused Profiles") setShowAccusedForm(true);
           }}
-          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold ${topTab === "Approval Workflow" ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold ${
+            topTab === "Approval Workflow" || topTab === "CIU Initiated" ? "opacity-50 cursor-not-allowed" : ""
+          }`}
           style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
-          disabled={topTab === "Approval Workflow"}
+          disabled={topTab === "Approval Workflow" || topTab === "CIU Initiated"}
         >
           <Plus className="h-4 w-4" />
           {topTab === "Source Reports" ? "New Source Report" : topTab === "Accused Profiles" ? "New Accused Profile" : "New Entry"}
@@ -339,7 +638,7 @@ export function IntelligencePage() {
 
       {/* ── CIU INITIATED ── */}
       {topTab === "CIU Initiated" && (
-        <CIUInitiatedReportForm />
+        <CIUInitiatedSection />
       )}
 
       {/* Forms Overlay */}

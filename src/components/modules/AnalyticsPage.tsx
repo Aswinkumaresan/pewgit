@@ -19,9 +19,9 @@ const radarData = [
 ];
 
 const anomalies = [
-  { id: 1, district: "Malappuram", type: "Unusual spike in NDPS cases", severity: "high", delta: "+340%", date: "Feb 25" },
-  { id: 2, district: "Wayanad", type: "Increased border crossings", severity: "medium", delta: "+120%", date: "Feb 24" },
-  { id: 3, district: "Kozhikode", type: "Repeat offenders clustering", severity: "medium", delta: "+85%", date: "Feb 23" },
+  { id: 1, district: "Chennai", type: "Unusual spike in NDPS cases", severity: "high", delta: "+340%", date: "Feb 25" },
+  { id: 2, district: "Tirunelveli", type: "Increased interstate smuggling activity", severity: "medium", delta: "+120%", date: "Feb 24" },
+  { id: 3, district: "Coimbatore", type: "Repeat offenders clustering", severity: "medium", delta: "+85%", date: "Feb 23" },
 ];
 
 export function AnalyticsPage() {

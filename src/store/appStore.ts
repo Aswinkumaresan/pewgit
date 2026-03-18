@@ -4,7 +4,7 @@ type Module = "dashboard" | "gis" | "dsr" | "intelligence" | "analytics" | "chec
 
 export type ApprovalRole = 'CIU' | 'DSP' | 'SPCIU' | 'DIG' | 'ADGP' | 'PEW_DSP';
 
-export type ReportStatus = 'pending_dsp' | 'pending_spciu' | 'pending_dig' | 'pending_adgp' | 'approved_adgp' | 'delegated' | 'rejected';
+export type ReportStatus = 'pending_dsp' | 'pending_spciu' | 'pending_dig' | 'pending_adgp' | 'approved_adgp' | 'delegated' | 'field_report_received' | 'rejected';
 
 export interface Offender {
   type: 'known' | 'unknown';
@@ -33,7 +33,15 @@ export interface IntelligenceReport {
   status: ReportStatus;
   history: { role: ApprovalRole; action: 'submitted' | 'approved' | 'rejected' | 'delegated'; date: string; comment?: string }[];
   delegation?: { district: string; officer: string; assignedDate: string };
-  fieldReport?: { content: string; date: string; status: string; adgpAction?: string };
+  fieldReport?: {
+    content: string;
+    date: string;
+    status: string;
+    actionTaken?: 'arrested' | 'surveillance' | 'released';
+    arrestDetails?: { accusedName: string; court: string; remandDate: string; remandOrderNo: string; remarks: string };
+    adgpAction?: string;
+    adgpResponse?: string;
+  };
 }
 
 interface AppState {
@@ -51,8 +59,9 @@ interface AppState {
   updateReportStatus: (id: string, newStatus: ReportStatus, role: ApprovalRole, action: 'approved' | 'rejected', comment?: string) => void;
   updateOffenderDetails: (reportId: string, offenderIndex: number, updatedData: any) => void;
   delegateReport: (id: string, district: string, officer: string) => void;
-  submitFieldReport: (id: string, content: string) => void;
+  submitFieldReport: (id: string, content: string, actionTaken: 'arrested' | 'surveillance' | 'released', arrestDetails?: { accusedName: string; court: string; remandDate: string; remandOrderNo: string; remarks: string }) => void;
   submitDspActionToAdgp: (id: string, content: string) => void;
+  adgpRespondToFieldReport: (id: string, response: string) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -118,13 +127,20 @@ export const useAppStore = create<AppState>((set) => ({
       })
     }));
   },
-  submitFieldReport: (id, content) => {
+  submitFieldReport: (id, content, actionTaken, arrestDetails) => {
     set((state) => ({
       intelligenceReports: state.intelligenceReports.map(r => {
         if (r.id === id) {
           return {
             ...r,
-            fieldReport: { content, date: new Date().toISOString().split('T')[0], status: 'Pending DSP Action' }
+            status: 'field_report_received',
+            fieldReport: {
+              content,
+              date: new Date().toISOString().split('T')[0],
+              status: 'Pending DSP Action',
+              actionTaken,
+              arrestDetails: actionTaken === 'arrested' ? arrestDetails : undefined,
+            }
           };
         }
         return r;
@@ -138,6 +154,19 @@ export const useAppStore = create<AppState>((set) => ({
           return {
             ...r,
             fieldReport: { ...r.fieldReport, adgpAction: content, status: 'Submitted to ADGP' }
+          };
+        }
+        return r;
+      })
+    }));
+  },
+  adgpRespondToFieldReport: (id, response) => {
+    set((state) => ({
+      intelligenceReports: state.intelligenceReports.map(r => {
+        if (r.id === id && r.fieldReport) {
+          return {
+            ...r,
+            fieldReport: { ...r.fieldReport, adgpResponse: response, status: 'ADGP Response Received' }
           };
         }
         return r;

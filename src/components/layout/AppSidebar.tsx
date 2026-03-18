@@ -12,13 +12,13 @@ const navItems = [
   { id: "gis", label: "GIS Intelligence Map", icon: Map, group: "main" },
   { id: "dsr", label: "Daily Situation Report", icon: FileText, group: "operations" },
   { id: "intelligence", label: "Intelligence Module", icon: Brain, group: "operations" },
-  { id: "analytics", label: "Prediction & Analytics", icon: BarChart3, group: "operations" },
+  { id: "pew_officer", label: "PEW Operations", icon: Shield, group: "operations" },
   { id: "checkpost", label: "Checkpost Monitoring", icon: Shield, group: "operations" },
+  { id: "analytics", label: "Prediction & Analytics", icon: BarChart3, group: "operations" },
   { id: "reports", label: "Reports & Exports", icon: ClipboardList, group: "reports" },
   { id: "admin", label: "Admin Management", icon: Users, group: "admin" },
   { id: "audit", label: "Audit Logs", icon: ScrollText, group: "admin" },
   { id: "settings", label: "Settings", icon: Settings, group: "admin" },
-  { id: "pew_officer", label: "PEW Operations", icon: Shield, group: "operations" },
 ];
 
 const groups = [

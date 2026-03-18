@@ -28,7 +28,7 @@ type OffenderEntry = {
   risk?: string;
 };
 
-export function CIUInitiatedReportForm() {
+export function CIUInitiatedReportForm({ onAfterSubmit }: { onAfterSubmit?: () => void } = {}) {
   const [offenderIds, setOffenderIds] = useState<number[]>([1]);
   const [offenderEntries, setOffenderEntries] = useState<Record<number, OffenderEntry>>({
     1: { type: 'known' }
@@ -123,6 +123,7 @@ export function CIUInitiatedReportForm() {
       setOffenderEntries({ 1: { type: 'known' } });
       setLocation(""); setDistrict(""); setTime("");
       setIsSubmitted(false);
+      onAfterSubmit?.();
     }, 3000);
   };
 

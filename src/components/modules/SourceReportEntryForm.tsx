@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { OffencesSelector } from "./OffencesSelector";
 
 const statusOptions = ["Pending", "Under Review", "Approved"];
 const riskOptions = ["low", "medium", "high"];
@@ -19,6 +20,7 @@ export function SourceReportEntryForm({ onClose }: { onClose: () => void }) {
   const [status, setStatus] = useState("Pending");
   const [risk, setRisk] = useState("medium");
   const [remarks, setRemarks] = useState("");
+  const [offences, setOffences] = useState<string[]>([]);
 
   const handleSubmit = () => {
     console.log("Source Report submitted");
@@ -125,6 +127,15 @@ export function SourceReportEntryForm({ onClose }: { onClose: () => void }) {
             />
           </div>
         </div>
+      </div>
+
+      {/* Offences */}
+      <div
+        className={sectionCls}
+        style={{ borderColor: "hsl(var(--border))" }}
+      >
+        <p className={sectionTitleCls}>Offences Involved</p>
+        <OffencesSelector selected={offences} onChange={setOffences} />
       </div>
 
       {/* Footer */}

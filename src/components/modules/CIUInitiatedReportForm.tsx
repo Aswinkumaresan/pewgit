@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, ArrowRight, Search, Trash2, User, UserCheck, ShieldAlert, CheckCircle2, ChevronRight } from "lucide-react";
 import { useAppStore } from "../../store/appStore";
+import { OffencesSelector } from "./OffencesSelector";
 
 // Mock known offenders data
 const mockKnownOffenders = [
@@ -38,6 +39,7 @@ export function CIUInitiatedReportForm({ onAfterSubmit }: { onAfterSubmit?: () =
   const [district, setDistrict] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [time, setTime] = useState("");
+  const [offences, setOffences] = useState<string[]>([]);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const submitIntelligenceReport = useAppStore(state => state.submitIntelligenceReport);
@@ -121,7 +123,7 @@ export function CIUInitiatedReportForm({ onAfterSubmit }: { onAfterSubmit?: () =
     setTimeout(() => {
       setOffenderIds([1]);
       setOffenderEntries({ 1: { type: 'known' } });
-      setLocation(""); setDistrict(""); setTime("");
+      setLocation(""); setDistrict(""); setTime(""); setOffences([]);
       setIsSubmitted(false);
       onAfterSubmit?.();
     }, 3000);
@@ -177,6 +179,14 @@ export function CIUInitiatedReportForm({ onAfterSubmit }: { onAfterSubmit?: () =
                 <input type="text" className={inputCls} placeholder="District name" value={district} onChange={e => setDistrict(e.target.value)} />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Offences */}
+        <div className="stat-card p-0">
+          <div className="p-5">
+            <h3 className="text-sm font-bold text-foreground mb-4">Offences Involved</h3>
+            <OffencesSelector selected={offences} onChange={setOffences} />
           </div>
         </div>
 

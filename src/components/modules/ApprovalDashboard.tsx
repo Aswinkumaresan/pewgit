@@ -3,6 +3,63 @@ import { useState } from "react";
 import { useAppStore, ApprovalRole, ReportStatus, IntelligenceReport } from "../../store/appStore";
 import { ShieldAlert, CheckCircle, XCircle, ArrowRight, Clock, MessageSquare, Edit2, Save, X, Download, FileText } from "lucide-react";
 
+// ── Seed sample data ────────────────────────────────────────────────────────
+const STATUS_META: Record<string, { label: string; pill: string }> = {
+  pending_dsp:   { label: "Pending DSP",     pill: "bg-yellow-100 text-yellow-700" },
+  pending_spciu: { label: "Pending SPCIU",   pill: "bg-orange-100 text-orange-700" },
+  pending_dig:   { label: "Pending DIG",     pill: "bg-blue-100 text-blue-700" },
+  pending_adgp:  { label: "Pending ADGP",    pill: "bg-purple-100 text-purple-700" },
+  approved_adgp: { label: "ADGP Approved ✓", pill: "bg-green-100 text-green-700" },
+  delegated:     { label: "Delegated",        pill: "bg-cyan-100 text-cyan-700" },
+  rejected:      { label: "Rejected",         pill: "bg-red-100 text-red-700" },
+  field_report_received: { label: "Field Report Received", pill: "bg-teal-100 text-teal-700" },
+};
+
+const SEED_CIU: IntelligenceReport[] = [
+  { id:"INT-2025-3001", source:"CIU", date:"2025-03-02", time:"09:00", location:"Central Bus Stand", district:"Chennai",
+    offenders:[{type:"known",firstName:"Arun",lastName:"Vel",risk:"High"}], status:"approved_adgp",
+    history:[{role:"CIU",action:"submitted",date:"2025-03-02T09:00:00Z"},{role:"DSP",action:"approved",date:"2025-03-02T11:00:00Z"},{role:"SPCIU",action:"approved",date:"2025-03-03T09:30:00Z"},{role:"DIG",action:"approved",date:"2025-03-03T14:00:00Z"},{role:"ADGP",action:"approved",date:"2025-03-04T10:00:00Z",comment:"Proceed immediately."}]},
+  { id:"INT-2025-3105", source:"CIU", date:"2025-03-05", time:"14:15", location:"Koyambedu Market", district:"Chennai",
+    offenders:[{type:"known",firstName:"Bala",lastName:"Krishnan",risk:"Medium"},{type:"unknown",description:"Male companion",risk:"Low"}], status:"pending_dig",
+    history:[{role:"CIU",action:"submitted",date:"2025-03-05T14:15:00Z"},{role:"DSP",action:"approved",date:"2025-03-06T08:00:00Z"},{role:"SPCIU",action:"approved",date:"2025-03-06T16:30:00Z",comment:"Verified."}]},
+  { id:"INT-2025-3202", source:"CIU", date:"2025-03-08", time:"11:30", location:"Periyar Nagar", district:"Madurai",
+    offenders:[{type:"known",firstName:"Chitra",lastName:"Selvam",risk:"High"}], status:"pending_spciu",
+    history:[{role:"CIU",action:"submitted",date:"2025-03-08T11:30:00Z"},{role:"DSP",action:"approved",date:"2025-03-09T09:00:00Z",comment:"Credible source."}]},
+  { id:"INT-2025-3308", source:"CIU", date:"2025-03-11", time:"16:00", location:"Gandhipuram", district:"Coimbatore",
+    offenders:[{type:"known",firstName:"Durai",lastName:"Nadar",risk:"Low"}], status:"rejected",
+    history:[{role:"CIU",action:"submitted",date:"2025-03-11T16:00:00Z"},{role:"DSP",action:"rejected",date:"2025-03-12T10:00:00Z",comment:"Insufficient evidence."}]},
+  { id:"INT-2025-3410", source:"CIU", date:"2025-03-14", time:"08:45", location:"Salem Junction", district:"Salem",
+    offenders:[{type:"unknown",description:"Two men on white Pulsar",risk:"Medium"}], status:"pending_dsp",
+    history:[{role:"CIU",action:"submitted",date:"2025-03-14T08:45:00Z"}]},
+];
+
+const SEED_PEW: IntelligenceReport[] = [
+  { id:"INT-2025-2901", source:"CIU", date:"2025-03-01", time:"10:00", location:"RS Puram", district:"Coimbatore",
+    offenders:[{type:"known",firstName:"Elanko",lastName:"Raja",risk:"High"}], status:"approved_adgp",
+    history:[{role:"CIU",action:"submitted",date:"2025-03-01T10:00:00Z"},{role:"ADGP",action:"approved",date:"2025-03-02T09:00:00Z",comment:"High priority."}]},
+  { id:"INT-2025-2980", source:"CIU", date:"2025-03-03", time:"09:00", location:"RS Puram Junction", district:"Coimbatore",
+    offenders:[{type:"known",firstName:"Senthil",lastName:"Kumar",risk:"High"}], status:"delegated",
+    delegation:{officer:"Inspector Rajan",district:"Coimbatore",assignedDate:"2025-03-04"},
+    history:[{role:"CIU",action:"submitted",date:"2025-03-03T09:00:00Z"},{role:"ADGP",action:"approved",date:"2025-03-04T08:00:00Z"},{role:"PEW_DSP",action:"delegated",date:"2025-03-04T10:00:00Z"}]},
+  { id:"INT-2025-3210", source:"CIU", date:"2025-03-08", time:"10:00", location:"Koyambedu Market", district:"Chennai",
+    offenders:[{type:"known",firstName:"Raghu",lastName:"Nadar",risk:"High"}], status:"approved_adgp",
+    history:[{role:"CIU",action:"submitted",date:"2025-03-08T10:00:00Z"},{role:"ADGP",action:"approved",date:"2025-03-09T09:00:00Z"}]},
+];
+
+const SEED_PENDING: IntelligenceReport[] = [
+  { id:"INT-2025-3105", source:"CIU", date:"2025-03-05", time:"14:15", location:"Koyambedu", district:"Chennai",
+    offenders:[{type:"known",firstName:"Bala",lastName:"Krishnan",risk:"Medium"}], status:"pending_dig",
+    history:[{role:"CIU",action:"submitted",date:"2025-03-05T14:15:00Z"},{role:"DSP",action:"approved",date:"2025-03-06T08:00:00Z"},{role:"SPCIU",action:"approved",date:"2025-03-06T16:30:00Z"}]},
+  { id:"INT-2025-3350", source:"CIU", date:"2025-03-12", time:"13:00", location:"Anna Nagar", district:"Chennai",
+    offenders:[{type:"known",firstName:"Priya",lastName:"Murthi",risk:"High"}], status:"pending_dig",
+    history:[{role:"CIU",action:"submitted",date:"2025-03-12T13:00:00Z"},{role:"DSP",action:"approved",date:"2025-03-13T09:00:00Z"},{role:"SPCIU",action:"approved",date:"2025-03-13T14:00:00Z",comment:"High risk — expedite."}]},
+];
+
+const TH = ({ children }: { children: React.ReactNode }) => (
+  <th className="text-left py-2.5 px-4 text-xs font-semibold text-muted-foreground whitespace-nowrap">{children}</th>
+);
+
+
 const getRoleStatusMap = (role: ApprovalRole): ReportStatus => {
   switch (role) {
     case 'DSP': return 'pending_dsp';
@@ -206,182 +263,105 @@ export function ApprovalDashboard() {
 
       {/* ─── CIU VIEW: Shows Reports Submitted by CIU ──────────────── */}
       {currentUserRole === 'CIU' && (() => {
-        const ciuReports = intelligenceReports.filter(r => r.source === 'CIU');
+        const live = intelligenceReports.filter(r => r.source === 'CIU');
+        const ciuReports = [...SEED_CIU, ...live.filter(r => !SEED_CIU.find(s => s.id === r.id))];
         return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-foreground">My Submitted Reports</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">{ciuReports.length} reports submitted by CIU</p>
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-bold text-foreground">My Submitted Reports</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">{ciuReports.length} reports submitted by CIU</p>
+            </div>
+            <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'hsl(var(--border))' }}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 border-b" style={{ borderColor: 'hsl(var(--border))' }}>
+                    <tr><TH>Report ID</TH><TH>Date / Time</TH><TH>Location</TH><TH>District</TH><TH>Offenders</TH><TH>Last Action</TH><TH>Status</TH></tr>
+                  </thead>
+                  <tbody>
+                    {ciuReports.length === 0 ? (
+                      <tr><td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">No reports submitted yet. Use the CIU Initiated tab.</td></tr>
+                    ) : ciuReports.map((r, i) => {
+                      const sm = STATUS_META[r.status] || { label: r.status, pill: 'bg-muted text-muted-foreground' };
+                      const last = r.history[r.history.length - 1];
+                      return (
+                        <motion.tr key={r.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
+                          className={`border-b transition-colors hover:bg-muted/10 ${i % 2 !== 0 ? 'bg-muted/5' : ''}`}
+                          style={{ borderColor: 'hsl(var(--border))' }}>
+                          <td className="py-3 px-4 font-mono text-xs font-semibold" style={{ color: 'hsl(var(--accent))' }}>{r.id}</td>
+                          <td className="py-3 px-4 text-xs text-muted-foreground">{r.date}<br/><span className="opacity-60">{r.time}</span></td>
+                          <td className="py-3 px-4 font-medium text-foreground">{r.location}</td>
+                          <td className="py-3 px-4 text-muted-foreground">{r.district}</td>
+                          <td className="py-3 px-4 text-center font-semibold">{r.offenders.length}</td>
+                          <td className="py-3 px-4 text-xs">
+                            {last && (
+                              <span className={`px-2 py-0.5 rounded-full font-semibold text-[10px] ${
+                                last.action === 'approved' ? 'bg-green-100 text-green-700' :
+                                last.action === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-muted text-muted-foreground'
+                              }`}>{last.role}: {last.action}</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${sm.pill}`}>{sm.label}</span>
+                          </td>
+                        </motion.tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
-            {ciuReports.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 text-center bg-card border rounded-xl">
-                <ShieldAlert className="h-10 w-10 text-muted-foreground mb-3 opacity-50" />
-                <h3 className="text-sm font-bold text-foreground mb-1">No Reports Submitted Yet</h3>
-                <p className="text-xs text-muted-foreground">Use the CIU Initiated tab to submit a new intelligence report.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {ciuReports.map(report => {
-                  const lastHistory = report.history[report.history.length - 1];
-                  const statusLabel: Record<string, { label: string; color: string }> = {
-                    pending_dsp: { label: 'Pending DSP', color: 'text-yellow-600 bg-yellow-100' },
-                    pending_spciu: { label: 'Pending SPCIU', color: 'text-orange-600 bg-orange-100' },
-                    pending_dig: { label: 'Pending DIG', color: 'text-blue-600 bg-blue-100' },
-                    pending_adgp: { label: 'Pending ADGP', color: 'text-purple-600 bg-purple-100' },
-                    approved_adgp: { label: 'ADGP Approved ✓', color: 'text-green-700 bg-green-100' },
-                    delegated: { label: 'Delegated', color: 'text-cyan-600 bg-cyan-100' },
-                    rejected: { label: 'Rejected', color: 'text-red-600 bg-red-100' },
-                  };
-                  const statusInfo = statusLabel[report.status] || { label: report.status, color: 'text-muted-foreground bg-muted' };
-                  return (
-                    <div key={report.id} className="bg-card border rounded-xl overflow-hidden" style={{ borderColor: 'hsl(var(--border))' }}>
-                      {/* Header */}
-                      <div className="flex justify-between items-start p-4 border-b bg-muted/10" style={{ borderColor: 'hsl(var(--border))' }}>
-                        <div className="flex items-center gap-2">
-                          <ShieldAlert className="h-4 w-4 text-primary" />
-                          <span className="font-bold text-sm text-foreground">{report.id}</span>
-                        </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusInfo.color}`}>{statusInfo.label}</span>
-                      </div>
-                      {/* Body */}
-                      <div className="p-4 space-y-3">
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
-                          <div><span className="text-muted-foreground">Date:</span> <span className="font-medium text-foreground">{report.date}</span></div>
-                          <div><span className="text-muted-foreground">Time:</span> <span className="font-medium text-foreground">{report.time || '—'}</span></div>
-                          <div><span className="text-muted-foreground">Location:</span> <span className="font-medium text-foreground">{report.location || '—'}</span></div>
-                          <div><span className="text-muted-foreground">District:</span> <span className="font-medium text-foreground">{report.district || '—'}</span></div>
-                        </div>
-                        {/* Offenders */}
-                        {report.offenders.length > 0 && (
-                          <div>
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Offenders ({report.offenders.length})</p>
-                            <div className="space-y-2">
-                              {report.offenders.map((o, i) => (
-                                <div key={i} className="flex justify-between items-start text-xs bg-muted/20 rounded-lg p-2.5 border" style={{ borderColor: 'hsl(var(--border))' }}>
-                                  <div>
-                                    <span className="font-semibold text-foreground">{[o.firstName, o.lastName, o.surName].filter(Boolean).join(' ') || 'Unknown'}</span>
-                                    {(o as any).aliasName && <span className="text-muted-foreground ml-1">({(o as any).aliasName})</span>}
-                                    {(o as any).idProofNumber && <p className="text-muted-foreground font-mono mt-0.5">ID: {(o as any).idProofNumber}</p>}
-                                    {o.address && <p className="text-muted-foreground mt-0.5">{o.address}</p>}
-                                  </div>
-                                  <div className="flex flex-col items-end gap-1">
-                                    <span className="uppercase text-[10px] font-bold bg-muted px-1.5 py-0.5 rounded">{o.type}</span>
-                                    {o.risk && <span className={`text-[10px] font-semibold ${o.risk.toLowerCase() === 'high' ? 'text-red-600' : o.risk.toLowerCase() === 'medium' ? 'text-yellow-600' : 'text-green-600'}`}>{o.risk} Risk</span>}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {/* Timeline */}
-                        <div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Approval Timeline</p>
-                          <div className="flex gap-2 flex-wrap">
-                            {report.history.map((h, i) => (
-                              <div key={i} className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-full font-semibold ${h.action === 'approved' ? 'bg-green-100 text-green-700' : h.action === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-muted text-muted-foreground'}`}>
-                                {h.role}: {h.action}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         );
       })()}
 
       {/* ─── PEW_DSP VIEW: ADGP-approved reports ready for delegation ── */}
       {currentUserRole === 'PEW_DSP' && (() => {
-        const approvedReports = intelligenceReports.filter(r => r.status === 'approved_adgp' || r.status === 'delegated');
+        const live = intelligenceReports.filter(r => r.status === 'approved_adgp' || r.status === 'delegated');
+        const approvedReports = [...SEED_PEW, ...live.filter(r => !SEED_PEW.find(s => s.id === r.id))];
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
               <h3 className="font-bold text-foreground">ADGP Approved Reports — Action Required</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Reports that have been approved by ADGP and forwarded to PEW DSP for delegation</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Reports approved by ADGP and awaiting PEW DSP delegation</p>
             </div>
-            {approvedReports.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 text-center bg-card border rounded-xl">
-                <Clock className="h-10 w-10 text-muted-foreground mb-3 opacity-50" />
-                <h3 className="text-sm font-bold text-foreground mb-1">No Reports Awaiting Action</h3>
-                <p className="text-xs text-muted-foreground">Reports will appear here once ADGP approves them.</p>
+            <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'hsl(var(--border))' }}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 border-b" style={{ borderColor: 'hsl(var(--border))' }}>
+                    <tr><TH>Report ID</TH><TH>Date</TH><TH>Location</TH><TH>District</TH><TH>Offenders</TH><TH>ADGP Approved On</TH><TH>Status</TH><TH>Delegated To</TH></tr>
+                  </thead>
+                  <tbody>
+                    {approvedReports.length === 0 ? (
+                      <tr><td colSpan={8} className="py-10 text-center text-sm text-muted-foreground">No reports awaiting delegation.</td></tr>
+                    ) : approvedReports.map((r, i) => {
+                      const sm = STATUS_META[r.status] || { label: r.status, pill: 'bg-muted text-muted-foreground' };
+                      const adgpEntry = r.history.find(h => h.role === 'ADGP');
+                      return (
+                        <motion.tr key={r.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
+                          className={`border-b transition-colors hover:bg-muted/10 ${i % 2 !== 0 ? 'bg-muted/5' : ''}`}
+                          style={{ borderColor: 'hsl(var(--border))' }}>
+                          <td className="py-3 px-4 font-mono text-xs font-semibold" style={{ color: 'hsl(var(--accent))' }}>{r.id}</td>
+                          <td className="py-3 px-4 text-xs text-muted-foreground">{r.date}</td>
+                          <td className="py-3 px-4 font-medium text-foreground">{r.location}</td>
+                          <td className="py-3 px-4 text-muted-foreground">{r.district}</td>
+                          <td className="py-3 px-4 text-center font-semibold">{r.offenders.length}</td>
+                          <td className="py-3 px-4 text-xs text-muted-foreground">
+                            {adgpEntry ? new Date(adgpEntry.date).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : '—'}
+                            {adgpEntry?.comment && <p className="italic opacity-70 mt-0.5">"{adgpEntry.comment}"</p>}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${sm.pill}`}>{sm.label}</span>
+                          </td>
+                          <td className="py-3 px-4 text-xs text-muted-foreground">
+                            {r.delegation ? <span className="font-medium text-foreground">{r.delegation.officer}</span> : <span className="opacity-40">—</span>}
+                          </td>
+                        </motion.tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {approvedReports.map(report => {
-                  const adgpAction = report.history.find(h => h.role === 'ADGP');
-                  const isApproved = report.status === 'approved_adgp';
-                  return (
-                    <div key={report.id} className="bg-card border rounded-xl overflow-hidden" style={{ borderColor: 'hsl(var(--border))' }}>
-                      {/* Header */}
-                      <div className="p-4 border-b bg-green-50 dark:bg-green-950/20 flex justify-between items-start" style={{ borderColor: 'hsl(var(--border))' }}>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                          <span className="font-bold text-sm text-foreground">{report.id}</span>
-                        </div>
-                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${isApproved ? 'bg-green-100 text-green-700' : 'bg-cyan-100 text-cyan-700'}`}>
-                          {isApproved ? 'ADGP Approved — Awaiting Delegation' : 'Delegated ✓'}
-                        </span>
-                      </div>
-                      {/* ADGP Approval stamp */}
-                      {adgpAction && (
-                        <div className="mx-4 mt-4 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
-                          <p className="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase mb-1">ADGP Approval</p>
-                          <div className="flex items-center gap-3 text-xs">
-                            <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-                            <div>
-                              <span className="font-semibold text-foreground">Approved on {new Date(adgpAction.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                              {adgpAction.comment && <p className="text-muted-foreground mt-0.5 italic">"{adgpAction.comment}"</p>}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {/* Report Body */}
-                      <div className="p-4 space-y-3">
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
-                          <div><span className="text-muted-foreground">Date:</span> <span className="font-medium text-foreground">{report.date}</span></div>
-                          <div><span className="text-muted-foreground">District:</span> <span className="font-medium text-foreground">{report.district || '—'}</span></div>
-                          <div className="col-span-2"><span className="text-muted-foreground">Location:</span> <span className="font-medium text-foreground">{report.location || '—'}</span></div>
-                        </div>
-                        {/* Offenders summary */}
-                        {report.offenders.length > 0 && (
-                          <div>
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Offenders Involved ({report.offenders.length})</p>
-                            <div className="space-y-1.5">
-                              {report.offenders.map((o, i) => (
-                                <div key={i} className="flex justify-between items-center text-xs rounded-lg p-2 bg-muted/20 border" style={{ borderColor: 'hsl(var(--border))' }}>
-                                  <span className="font-semibold text-foreground">{[o.firstName, o.lastName].filter(Boolean).join(' ') || 'Unknown'} <span className={`font-normal ${o.risk?.toLowerCase() === 'high' ? 'text-red-600' : o.risk?.toLowerCase() === 'medium' ? 'text-yellow-600' : 'text-green-600'}`}>({o.risk})</span></span>
-                                  <span className="uppercase text-[10px] font-bold bg-muted px-1.5 py-0.5 rounded">{o.type}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {/* Full approval chain */}
-                        <div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Full Approval Chain</p>
-                          <div className="space-y-1.5">
-                            {report.history.map((h, i) => (
-                              <div key={i} className={`flex items-center gap-3 p-2 rounded-lg text-xs border ${h.action === 'approved' ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : h.action === 'rejected' ? 'bg-red-50 border-red-200' : 'bg-muted/20 border-border'}`}>
-                                {h.action === 'approved' ? <CheckCircle className="h-3.5 w-3.5 text-green-600 shrink-0" /> : h.action === 'rejected' ? <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-                                <span className="font-bold w-14">{h.role}</span>
-                                <span className="capitalize text-muted-foreground flex-1">{h.action === 'submitted' ? 'Initiated report' : h.action}</span>
-                                <span className="text-muted-foreground">{new Date(h.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            </div>
           </div>
         );
       })()}
@@ -390,69 +370,98 @@ export function ApprovalDashboard() {
       {!['CIU', 'PEW_DSP'].includes(currentUserRole) && (
         <>
           <div className="flex items-center gap-1 border-b" style={{ borderColor: "hsl(var(--border))" }}>
-            <button
-              onClick={() => setActiveTab('pending')}
-              className={`px-5 py-2.5 text-sm font-semibold transition-colors relative ${activeTab === 'pending' ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Pending Approvals ({pendingReports.length})
+            <button onClick={() => setActiveTab('pending')}
+              className={`px-5 py-2.5 text-sm font-semibold transition-colors relative ${activeTab === 'pending' ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+              Pending Approvals ({[...SEED_PENDING.filter(s => !pendingReports.find(r => r.id === s.id)), ...pendingReports].length})
               {activeTab === 'pending' && <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t" style={{ background: "hsl(var(--primary))" }} />}
             </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`px-5 py-2.5 text-sm font-semibold transition-colors relative ${activeTab === 'history' ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
+            <button onClick={() => setActiveTab('history')}
+              className={`px-5 py-2.5 text-sm font-semibold transition-colors relative ${activeTab === 'history' ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               My History ({historyReports.length})
               {activeTab === 'history' && <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t" style={{ background: "hsl(var(--primary))" }} />}
             </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* List View */}
-            <div className="space-y-4">
-              {activeTab === 'pending' && pendingReports.length === 0 && (
-                <div className="text-center p-8 bg-muted/10 border rounded-lg" style={{ borderColor: 'hsl(var(--border))' }}>
-                  <p className="text-sm font-semibold text-muted-foreground">No pending reports for {currentUserRole}</p>
-                </div>
-              )}
-              {activeTab === 'history' && historyReports.length === 0 && (
+
+            {/* List View — compact clickable table */}
+            <div>
+              {activeTab === 'pending' && (() => {
+                const merged = [...SEED_PENDING.filter(s => !pendingReports.find(r => r.id === s.id)), ...pendingReports];
+                return merged.length === 0 ? (
+                  <div className="text-center p-8 bg-muted/10 border rounded-lg" style={{ borderColor: 'hsl(var(--border))' }}>
+                    <p className="text-sm font-semibold text-muted-foreground">No pending reports for {currentUserRole}</p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'hsl(var(--border))' }}>
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/40 border-b" style={{ borderColor: 'hsl(var(--border))' }}>
+                        <tr><TH>ID</TH><TH>Date</TH><TH>Location</TH><TH>Offenders</TH><TH>Risk</TH></tr>
+                      </thead>
+                      <tbody>
+                        {merged.map((report, i) => {
+                          const topRisk = report.offenders[0]?.risk || 'Low';
+                          return (
+                            <motion.tr key={report.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
+                              onClick={() => { setActiveTab('pending'); setSelectedReport(report); }}
+                              className={`border-b cursor-pointer transition-colors hover:bg-primary/5 ${selectedReport?.id === report.id ? 'bg-primary/10' : i % 2 !== 0 ? 'bg-muted/5' : ''}`}
+                              style={{ borderColor: 'hsl(var(--border))' }}>
+                              <td className="py-3 px-4 font-mono text-xs font-semibold" style={{ color: 'hsl(var(--accent))' }}>{report.id}</td>
+                              <td className="py-3 px-4 text-xs text-muted-foreground">{report.date}</td>
+                              <td className="py-3 px-4 text-xs font-medium text-foreground">{report.location}<br/><span className="text-muted-foreground font-normal">{report.district}</span></td>
+                              <td className="py-3 px-4 text-center text-xs font-semibold">{report.offenders.length}</td>
+                              <td className="py-3 px-4">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  topRisk.toLowerCase() === 'high' ? 'bg-red-100 text-red-700' :
+                                  topRisk.toLowerCase() === 'medium' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
+                                }`}>{topRisk}</span>
+                              </td>
+                            </motion.tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+
+              {activeTab === 'history' && (historyReports.length === 0 ? (
                 <div className="text-center p-8 bg-muted/10 border rounded-lg" style={{ borderColor: 'hsl(var(--border))' }}>
                   <p className="text-sm font-semibold text-muted-foreground">No approval history found for {currentUserRole}</p>
                 </div>
-              )}
-
-              {((activeTab === 'pending' ? pendingReports : historyReports)).map((report) => (
-                <motion.div 
-                  key={report.id}
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  onClick={() => { setActiveTab('pending'); setSelectedReport(report); }}
-                  className={`bg-card border rounded-xl p-4 cursor-pointer transition-all hover:shadow-md ${selectedReport?.id === report.id ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''}`}
-                  style={{ borderColor: "hsl(var(--border))" }}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <ShieldAlert className="h-4 w-4 text-primary" />
-                      <h4 className="font-bold text-sm text-foreground">{report.id}</h4>
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-muted font-mono text-muted-foreground flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {report.date} {report.time}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    <span className="font-semibold text-foreground">Location:</span> {report.location}, {report.district}
-                  </p>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    <span className="bg-primary/10 text-primary px-2 py-1 rounded-md font-medium">
-                      {report.offenders.length} Offender(s)
-                    </span>
-                    <span className="bg-muted px-2 py-1 rounded-md text-muted-foreground font-medium">
-                      Source: {report.source}
-                    </span>
-                  </div>
-                </motion.div>
+              ) : (
+                <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'hsl(var(--border))' }}>
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 border-b" style={{ borderColor: 'hsl(var(--border))' }}>
+                      <tr><TH>ID</TH><TH>Date</TH><TH>Location</TH><TH>My Action</TH><TH>Status</TH></tr>
+                    </thead>
+                    <tbody>
+                      {historyReports.map((report, i) => {
+                        const myAction = report.history.find(h => h.role === currentUserRole && h.action !== 'submitted');
+                        const sm = STATUS_META[report.status] || { label: report.status, pill: 'bg-muted text-muted-foreground' };
+                        return (
+                          <motion.tr key={report.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
+                            onClick={() => setSelectedReport(report)}
+                            className={`border-b cursor-pointer transition-colors hover:bg-primary/5 ${i % 2 !== 0 ? 'bg-muted/5' : ''}`}
+                            style={{ borderColor: 'hsl(var(--border))' }}>
+                            <td className="py-3 px-4 font-mono text-xs font-semibold" style={{ color: 'hsl(var(--accent))' }}>{report.id}</td>
+                            <td className="py-3 px-4 text-xs text-muted-foreground">{report.date}</td>
+                            <td className="py-3 px-4 text-xs font-medium text-foreground">{report.location}</td>
+                            <td className="py-3 px-4">
+                              {myAction && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${myAction.action === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{myAction.action}</span>}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${sm.pill}`}>{sm.label}</span>
+                            </td>
+                          </motion.tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               ))}
             </div>
+
 
             {/* Detail View */}
             {selectedReport ? (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { OffencesSelector } from "./OffencesSelector";
 
 const tnDistricts = [
   "Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem",
@@ -26,6 +27,7 @@ export function AccusedProfileEntryForm({ onClose }: { onClose: () => void }) {
   const [district, setDistrict] = useState("");
   const [status, setStatus] = useState("Active");
   const [risk, setRisk] = useState("medium");
+  const [offences, setOffences] = useState<string[]>([]);
 
   // Dynamic Lists
   const [sellingPoints, setSellingPoints] = useState<string[]>([""]);
@@ -210,6 +212,15 @@ export function AccusedProfileEntryForm({ onClose }: { onClose: () => void }) {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ── OFFENCES ── */}
+      <div
+        className={sectionCls}
+        style={{ borderColor: "hsl(var(--border))" }}
+      >
+        <p className={sectionTitleCls}>Offences Involved</p>
+        <OffencesSelector selected={offences} onChange={setOffences} />
       </div>
 
       {/* ── KNOWN ASSOCIATES ── */}
